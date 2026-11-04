@@ -1,4 +1,4 @@
-"""Load data/memories.jsonl for the demo user (wipes that user's rows first)."""
+"""Load data/memories.jsonl for the demo user, through app_user + RLS like a real request."""
 
 from __future__ import annotations
 
@@ -9,18 +9,20 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from memory_service.db import connect  # noqa: E402
-from memory_service.embed import embed_passages, to_pgvector  # noqa: E402
+from memory_service import logs  # noqa: E402
+from memory_service.db import connect, user_session  # noqa: E402
+from memory_service.embed import FastEmbedder, to_pgvector  # noqa: E402
 
 DEMO_USER = "00000000-0000-0000-0000-000000000001"
 DATA = ROOT / "data" / "memories.jsonl"
 
 
 def main() -> None:
+    logs.setup()
     rows = [json.loads(line) for line in DATA.read_text(encoding="utf-8").splitlines() if line.strip()]
-    vectors = embed_passages([r["text"] for r in rows])
-    with connect() as conn:
-        conn.execute("DELETE FROM memories WHERE user_id = %s", (DEMO_USER,))
+    vectors = FastEmbedder().embed_passages([r["text"] for r in rows])  # one batch instead of 40 calls
+    with connect() as conn, user_session(conn, DEMO_USER):
+        conn.execute("DELETE FROM memories")  # RLS: only this user's rows are visible, so only they go
         with conn.cursor() as cur:
             cur.executemany(
                 "INSERT INTO memories (id, user_id, text, embedding) VALUES (%s, %s, %s, %s::vector)",

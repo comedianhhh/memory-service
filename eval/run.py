@@ -9,7 +9,8 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from memory_service.db import connect  # noqa: E402
+from memory_service.db import connect, user_session  # noqa: E402
+from memory_service.embed import FastEmbedder  # noqa: E402
 from memory_service.rrf import rrf  # noqa: E402
 from memory_service.search import fts_search, vector_search  # noqa: E402
 from scripts.seed import DEMO_USER  # noqa: E402
@@ -34,11 +35,12 @@ def main() -> None:
     queries = [json.loads(line) for line in lines if line.strip()]
     totals = {m: {"recall": 0.0, "mrr": 0.0} for m in METHODS}
     per_query = []
-    with connect() as conn:
+    embedder = FastEmbedder()
+    with connect() as conn, user_session(conn, DEMO_USER):
         for q in queries:
             rel = set(q["relevant"])
-            vec = vector_search(conn, DEMO_USER, q["query"])
-            fts = fts_search(conn, DEMO_USER, q["query"])
+            vec = vector_search(conn, embedder, q["query"])
+            fts = fts_search(conn, q["query"])
             fused = [d for d, _ in rrf([vec, fts])]
             row = {"id": q["id"], "query": q["query"]}
             for m, ranked in zip(METHODS, (vec, fts, fused), strict=True):
