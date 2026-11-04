@@ -99,15 +99,38 @@ What the numbers say:
 - **The reranker wins that back and more** (0.957): the right answer is first more often. It costs ~28 ms per query on CPU.
 - **The one query nothing fixes is q10**, "is it safe to keep training for the race". It needs "physio told her to cut mileage", which is reasoning, not retrieval.
 
+## Chunking eval on conversations (`eval/convo_run.py`)
+
+**Setup**
+- Five synthetic conversations, 21–24 turns each (food, work, family, hobbies, money), in `data/conversations/`.
+- Each one is stored four ways, each under its own user so RLS keeps them apart.
+- Labels are **facts**, not ids, because ids change with chunking. A fact counts only if all of its phrases sit in one retrieved chunk. For example, "what's your partner's name?" + "Theo." must land together: a bare "Noor: Theo." can't be found by "partner's name", and wouldn't tell the model whose name it is.
+- About 10 of the 26 queries are like that on purpose; real chat answers are often just "January." or "Pickle."
+
+| chunking | chunks | avg words | RRF recall@5 | RRF MRR | +rerank recall@5 | +rerank MRR | words sent to LLM (top 5) |
+|---|---|---|---|---|---|---|---|
+| one turn per memory | 114 | 7 | 0.577 | 0.389 | 0.519 | 0.480 | 36 |
+| ≤40 words | 28 | 33 | 1.000 | 0.933 | 1.000 | 0.962 | 167 |
+| ≤80 words (API default) | 13 | 67 | 1.000 | 0.910 | 1.000 | 0.955 | 344 |
+| ≤160 words | 8 | 107 | 1.000 | 0.936 | 1.000 | 0.981 | 623 |
+
+What it shows:
+- **Storing each turn alone is the real failure.** Recall@5 is 0.58: answers lose their question, and even single-phrase facts like "low ferritin" can't be reached from "why does she need more iron" without the surrounding turn.
+- **Rerank made per-turn recall worse.** A cross-encoder can't fix chunks that don't contain enough to judge.
+- **Bigger chunks look free here but aren't.** With 8 chunks in total, top 5 is 62% of the data, so 160 words "wins" by returning almost everything. The real cost is the last column: 623 words go into the prompt instead of 167.
+- **On this data ≤40 words is the sweet spot:** full recall at a quarter of the 160-word context.
+- **Caveat:** 5 conversations is tiny. The chunk size should be re-checked when there are hundreds per user.
+
 ## Run
 
 ```bash
-docker compose up -d --wait
+docker compose up -d
 python -m venv .venv && .venv/Scripts/pip install -r requirements.txt
-.venv/Scripts/alembic upgrade head
-.venv/Scripts/python -m pytest -q          # 49 tests; DB tests skip if Postgres is down
+.venv/Scripts/python -m pytest -q          # 49 tests; waits for Postgres and runs migrations itself
+.venv/Scripts/alembic upgrade head         # only needed before running the scripts below without pytest first
 .venv/Scripts/python scripts/seed.py
 .venv/Scripts/python eval/run.py
+.venv/Scripts/python eval/convo_run.py
 .venv/Scripts/python scripts/bench_index.py
 JWT_SECRET=$(python -c "import secrets; print(secrets.token_urlsafe(48))") .venv/Scripts/uvicorn memory_service.api:app --port 8000
 ```
