@@ -1,0 +1,23 @@
+Noor: I finally signed up for pottery classes!
+Assistant: Exciting. When are they?
+Noor: Tuesday nights, 7 to 9, at Clay Studio on Ossington.
+Assistant: How many weeks?
+Noor: Eight weeks. It cost 340 dollars.
+Assistant: Have you done pottery before?
+Noor: Once in university, I was terrible at it.
+Assistant: What else do you do for fun?
+Noor: I play badminton with coworkers on Saturdays.
+Assistant: Competitive?
+Noor: Very. I'm the worst one there.
+Assistant: Any pets at home?
+Noor: A turtle.
+Assistant: What's his name?
+Noor: Pickle.
+Assistant: How old is Pickle?
+Noor: Eleven. He was my childhood pet.
+Assistant: Does he need anything special?
+Noor: A UV lamp, which I keep forgetting to replace.
+Assistant: When did you last replace it?
+Noor: Last March, I think.
+Assistant: Those usually last six months, so it's overdue.
+Noor: Oops. Adding it to my list.

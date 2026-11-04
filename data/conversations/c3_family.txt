@@ -1,0 +1,23 @@
+Noor: My brother Sami is visiting next weekend.
+Assistant: Nice! Where does he live?
+Noor: Calgary. He moved there for a job at an energy company.
+Assistant: Are you two close?
+Noor: We fought a lot as kids but we're good now.
+Assistant: What do you want to do with him?
+Noor: He loves hiking, so probably the Bruce Trail.
+Assistant: Sounds fun. Anyone else visiting?
+Noor: No, but my parents call every Sunday evening.
+Assistant: Where are your parents?
+Noor: Still in Amman.
+Assistant: Do you visit often?
+Noor: Once a year, usually in summer.
+Assistant: Has Theo met your family?
+Noor: They haven't met him yet. I'm nervous about it.
+Assistant: Why nervous?
+Noor: My mom wanted me to marry someone from back home.
+Assistant: That's hard. Are you planning an introduction?
+Noor: Maybe a video call first.
+Assistant: That's a gentle start.
+Noor: Update: Sami cancelled next weekend, his flight got moved to the 28th.
+Assistant: So he's coming later this month instead?
+Noor: Yes, on the 28th.

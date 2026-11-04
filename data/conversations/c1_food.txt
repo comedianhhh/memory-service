@@ -1,0 +1,22 @@
+Noor: Hey, can you help me plan meals for next week?
+Assistant: Sure. Any restrictions I should know about?
+Noor: I'm lactose intolerant, so no regular milk or soft cheese.
+Assistant: Got it. Anything you especially like?
+Noor: Spicy food. Anything with gochujang, honestly.
+Assistant: Noted. How many dinners do you cook yourself?
+Noor: Four. The other nights I eat at my partner's place.
+Assistant: What's your partner's name, so I can remember?
+Noor: Theo.
+Assistant: Does Theo have any restrictions?
+Noor: He's allergic to shellfish. Like, seriously allergic.
+Assistant: I'll keep shrimp and crab off any shared meals.
+Noor: Thanks. Also my doctor wants me to eat more iron.
+Assistant: Why is that?
+Noor: A blood test in September showed low ferritin.
+Assistant: Lentils, spinach and red meat would help. Do you eat red meat?
+Noor: Rarely. Maybe once a month.
+Assistant: Then lentils and spinach it is.
+Noor: Perfect. Oh, and I hate cilantro, it tastes like soap to me.
+Assistant: No cilantro, understood.
+Noor: Breakfast is always the same, overnight oats with oat milk.
+Assistant: Easy, I'll leave breakfast alone.

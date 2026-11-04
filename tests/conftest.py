@@ -13,15 +13,41 @@ import pytest  # noqa: E402
 from memory_service.db import ADMIN_DSN, connect  # noqa: E402
 
 
-def _db_up() -> bool:
-    try:
-        psycopg.connect(ADMIN_DSN, connect_timeout=2).close()
-        return True
-    except psycopg.OperationalError:
-        return False
+def _db_up(wait_s: float = float(os.environ.get("DB_WAIT_SECONDS", "20"))) -> bool:
+    """Right after `docker compose up` Postgres needs a few seconds before it accepts connections.
+    Wait for it instead of silently skipping every DB test."""
+    import time
+
+    deadline = time.monotonic() + wait_s
+    while True:
+        try:
+            psycopg.connect(ADMIN_DSN, connect_timeout=2).close()
+            return True
+        except psycopg.OperationalError:
+            if time.monotonic() >= deadline:
+                return False
+            time.sleep(1)
 
 
-requires_db = pytest.mark.skipif(not _db_up(), reason="Postgres not running: docker compose up -d")
+DB_UP = _db_up()
+requires_db = pytest.mark.skipif(not DB_UP, reason="Postgres not running: docker compose up -d")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _migrated() -> None:
+    """Bring a fresh database to the latest schema, so `docker compose up` + `pytest` is enough.
+    Idempotent: on an up-to-date database this is a no-op."""
+    if not DB_UP:
+        return
+    import pathlib
+
+    from alembic import command
+    from alembic.config import Config
+
+    root = pathlib.Path(__file__).resolve().parents[1]
+    cfg = Config(str(root / "alembic.ini"))
+    cfg.set_main_option("script_location", str(root / "migrations"))
+    command.upgrade(cfg, "head")
 
 
 def _cleanup(user_ids: list[str]) -> None:

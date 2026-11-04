@@ -1,0 +1,24 @@
+Noor: Ugh, long day.
+Assistant: What happened?
+Noor: My team lead quit without warning.
+Assistant: That's a lot. Who's covering?
+Noor: Me, apparently. I'm acting lead until they hire someone.
+Assistant: How do you feel about that?
+Noor: Honestly a bit excited but mostly tired.
+Assistant: What does the team work on?
+Noor: We build the billing system at Fernway, it's a logistics startup.
+Assistant: Any big deadlines coming up?
+Noor: The invoicing migration has to ship by December 12.
+Assistant: That's tight. Do you have standups?
+Noor: Every day at 9:15, and now I run them.
+Assistant: Any meetings you dread?
+Noor: The Thursday planning meeting with finance. It always runs over.
+Assistant: How long is it supposed to be?
+Noor: Thirty minutes. It's never thirty minutes.
+Assistant: Could you ask for an agenda?
+Noor: Good idea, I'll try that.
+Assistant: Anything else on your mind?
+Noor: I want to ask for a raise if I'm doing two jobs.
+Assistant: That sounds fair. When is the review cycle?
+Noor: January.
+Assistant: Then start writing down everything you've taken on.

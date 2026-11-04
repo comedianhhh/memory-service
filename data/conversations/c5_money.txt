@@ -1,0 +1,22 @@
+Noor: I want to get better with money.
+Assistant: What's your goal?
+Noor: Pay off my student loan by the end of next year.
+Assistant: How much is left on it?
+Noor: About 12 thousand.
+Assistant: What's your rent?
+Noor: 1850 a month for a one-bedroom.
+Assistant: Do you budget now?
+Noor: I use a spreadsheet but I never update it.
+Assistant: Would a monthly review help?
+Noor: Yes, first Sunday of every month.
+Assistant: Any big expenses coming?
+Noor: A trip to Lisbon in March with Theo.
+Assistant: How long?
+Noor: Ten days. We already booked the flights.
+Assistant: Where are you staying?
+Noor: An Airbnb in Alfama.
+Assistant: Anything you want to see?
+Noor: The tile museum, and a day trip to Sintra.
+Assistant: Sounds lovely. Are you saving for it separately?
+Noor: Yes, 200 a month into a travel account.
+Assistant: Good plan.

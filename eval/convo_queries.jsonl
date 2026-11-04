@@ -1,0 +1,26 @@
+{"id": "c01", "query": "what dairy can't she have", "facts": [["lactose intolerant"]]}
+{"id": "c02", "query": "what is her partner's name", "facts": [["partner's name", "Theo."]]}
+{"id": "c03", "query": "is Theo allergic to anything", "facts": [["Theo", "allergic to shellfish"]]}
+{"id": "c04", "query": "why does she need more iron", "facts": [["low ferritin"]]}
+{"id": "c05", "query": "herbs she hates", "facts": [["cilantro"]]}
+{"id": "c06", "query": "what does she eat for breakfast", "facts": [["overnight oats"]]}
+{"id": "c07", "query": "what happened to her team lead", "facts": [["team lead quit"]]}
+{"id": "c08", "query": "what company does she work for", "facts": [["Fernway"]]}
+{"id": "c09", "query": "invoicing migration deadline", "facts": [["December 12"]]}
+{"id": "c10", "query": "what time is standup", "facts": [["standups", "9:15"]]}
+{"id": "c11", "query": "meeting that always runs long", "facts": [["Thursday planning meeting"]]}
+{"id": "c12", "query": "when is her review cycle", "facts": [["review cycle", "January"]]}
+{"id": "c13", "query": "where does her brother live", "facts": [["Sami", "Calgary"]]}
+{"id": "c14", "query": "when is Sami coming now", "facts": [["Sami", "the 28th"]]}
+{"id": "c15", "query": "when do her parents call", "facts": [["every Sunday evening"]]}
+{"id": "c16", "query": "where are her parents", "facts": [["parents", "Amman"]]}
+{"id": "c17", "query": "has Theo met her family", "facts": [["haven't met him"]]}
+{"id": "c18", "query": "pottery class schedule", "facts": [["Tuesday nights"]]}
+{"id": "c19", "query": "how much did pottery cost", "facts": [["340 dollars"]]}
+{"id": "c20", "query": "weekend sport", "facts": [["badminton"]]}
+{"id": "c21", "query": "pet's name", "facts": [["turtle", "Pickle"]]}
+{"id": "c22", "query": "what does the turtle need", "facts": [["UV lamp"]]}
+{"id": "c23", "query": "student loan balance", "facts": [["student loan", "12 thousand"]]}
+{"id": "c24", "query": "how much is rent", "facts": [["rent", "1850"]]}
+{"id": "c25", "query": "Lisbon trip details", "facts": [["Lisbon"], ["Alfama"]]}
+{"id": "c26", "query": "how is she saving for travel", "facts": [["200 a month"]]}
