@@ -8,11 +8,11 @@ services:
     ports:
       - "5433:5432"   # 5433 on the host so it never fights a local Postgres
     volumes:
-      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U memory"]
       interval: 2s
       retries: 20
+# schema lives in migrations/ (alembic upgrade head), not in an init script
 volumes:
   pgdata:

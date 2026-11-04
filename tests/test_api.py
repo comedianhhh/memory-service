@@ -23,7 +23,29 @@ def client():
 
 
 def test_health(client):
-    assert client.get("/health").json() == {"status": "ok"}
+    body = client.get("/health").json()
+    assert body["status"] == "ok" and body["pool"]["size"] >= 1
+
+
+def test_message_is_chunked_and_each_chunk_is_searchable(client, users):
+    a, b = users
+    text = (
+        "My dentist moved the appointment to November 21. "
+        + "Filler sentence about nothing in particular here. " * 20
+        + "Also Biscuit the cat needs his thyroid pills at night."
+    )
+    r = client.post(f"/users/{a}/messages", json={"text": text})
+    assert r.status_code == 201
+    body = r.json()
+    assert len(body["memory_ids"]) > 1
+    assert all(i.startswith(body["message_id"]) for i in body["memory_ids"])
+
+    first = client.get(f"/users/{a}/memories/search", params={"q": "dentist", "mode": "fts"}).json()["results"][0]
+    last = client.get(f"/users/{a}/memories/search", params={"q": "thyroid", "mode": "fts"}).json()["results"][0]
+    assert first["id"] == body["memory_ids"][0] and "dentist" in first["text"]
+    assert last["id"] == body["memory_ids"][-1] and "thyroid" in last["text"]
+    assert first["source_id"] == last["source_id"] == body["message_id"]
+    assert client.get(f"/users/{b}/memories/search", params={"q": "dentist"}).json()["results"] == []
 
 
 def test_write_then_search_each_mode(client, users):
