@@ -30,13 +30,23 @@ def _reset(conn: psycopg.Connection) -> None:
 
 def make_pool(dsn: str = APP_DSN, min_size: int = 1, max_size: int = 10) -> ConnectionPool:
     """Opening a Postgres connection costs a TCP + TLS + auth round trip (~several ms) and a backend
-    process. A pool keeps a few open and hands them out per request."""
+    process. A pool keeps a few open and hands them out per request.
+
+    Reconnect: a pooled connection can die while idle (DB restart, failover, idle timeout, network
+    blip). `check` pings it on every checkout and swaps a dead one for a fresh connection, so the
+    request never sees the broken socket. If the whole DB is down, the pool keeps retrying in the
+    background for `reconnect_timeout` seconds with backoff before giving up on that slot.
+    """
     return ConnectionPool(
         dsn,
         min_size=min_size,
         max_size=max_size,
         kwargs={"autocommit": True},
+        check=ConnectionPool.check_connection,
         reset=_reset,
+        max_idle=300,  # close spare connections idle > 5 min (above min_size)
+        max_lifetime=3600,  # recycle every hour, so server-side settings / leaks don't accumulate
+        reconnect_timeout=60,
         open=False,
         name="memory-app",
     )

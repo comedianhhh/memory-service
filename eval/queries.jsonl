@@ -18,3 +18,33 @@
 {"id": "q18", "query": "pet medication", "relevant": ["m09"]}
 {"id": "q19", "query": "Looker dashboard deadline", "relevant": ["m26"]}
 {"id": "q20", "query": "nickname to avoid", "relevant": ["m32"]}
+{"id": "q21", "query": "what milk does she take in coffee", "relevant": ["m05"]}
+{"id": "q22", "query": "where does Lena live", "relevant": ["m02"]}
+{"id": "q23", "query": "what does she do at Northwind", "relevant": ["m03"]}
+{"id": "q24", "query": "when does she practise Japanese", "relevant": ["m10", "m36"]}
+{"id": "q25", "query": "anniversary date", "relevant": ["m13"]}
+{"id": "q26", "query": "topics to avoid bringing up", "relevant": ["m14", "m32"]}
+{"id": "q27", "query": "movie night suggestion", "relevant": ["m15"]}
+{"id": "q28", "query": "favourite place to eat", "relevant": ["m16"]}
+{"id": "q29", "query": "laptop problems", "relevant": ["m17"]}
+{"id": "q30", "query": "how much is she running", "relevant": ["m18"]}
+{"id": "q31", "query": "who is the landlord", "relevant": ["m20"]}
+{"id": "q32", "query": "how should rent be paid", "relevant": ["m20"]}
+{"id": "q33", "query": "savings goal", "relevant": ["m22"]}
+{"id": "q34", "query": "is she in the wedding party", "relevant": ["m23"]}
+{"id": "q35", "query": "bedtime routine", "relevant": ["m24"]}
+{"id": "q36", "query": "what happens if she skips lunch", "relevant": ["m25"]}
+{"id": "q37", "query": "what phone does she use", "relevant": ["m28"]}
+{"id": "q38", "query": "weekend volunteering", "relevant": ["m29"]}
+{"id": "q39", "query": "does she drink alcohol", "relevant": ["m30"]}
+{"id": "q40", "query": "who needs math tutoring", "relevant": ["m31"]}
+{"id": "q41", "query": "when does she fly to Vancouver", "relevant": ["m33"]}
+{"id": "q42", "query": "back pain at work", "relevant": ["m34"]}
+{"id": "q43", "query": "what car does she drive", "relevant": ["m35"]}
+{"id": "q44", "query": "Wednesday evening plans", "relevant": ["m36"]}
+{"id": "q45", "query": "how are things with her sister lately", "relevant": ["m37", "m02"]}
+{"id": "q46", "query": "who is Ellen", "relevant": ["m38"]}
+{"id": "q47", "query": "performance review timing", "relevant": ["m40"]}
+{"id": "q48", "query": "plans for April", "relevant": ["m11"]}
+{"id": "q49", "query": "what injuries does she have", "relevant": ["m19"]}
+{"id": "q50", "query": "things that happened in October", "relevant": ["m19", "m28", "m37"]}
