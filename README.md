@@ -43,17 +43,19 @@ GET  /users/{id}/memories/search?q=&mode=hybrid|vector|fts&k=5
 
 ## EXPLAIN ANALYZE (`scripts/bench_index.py`: 10 users × 2000 rows, run as app_user under RLS)
 
+Two runs, local Docker on Windows:
+
 | query | plan | rows back | time |
 |---|---|---|---|
-| vector top 20, HNSW default | Index Scan using `memories_embedding_hnsw`, 34 removed by RLS filter | **6** | 3.2 ms |
-| vector top 20, HNSW + iterative scan | Index Scan using `memories_embedding_hnsw`, 170 removed | 20 | 4.2 ms |
-| vector top 20, index scans off | Bitmap scan on `memories_user_id` + top-N sort (exact) | 20 | 3.6 ms |
-| full-text `zanzibar` (rare) | Bitmap scan on `memories_user_id`, then `tsv @@ q` filter | 4 | 0.3 ms |
-| full-text `coffee` (common) | same | 20 | 0.5 ms |
+| vector top 20, HNSW default | Index Scan using `memories_embedding_hnsw`, the rest removed by the RLS filter | **6, 4** | 3.0–3.2 ms |
+| vector top 20, HNSW + iterative scan | Index Scan using `memories_embedding_hnsw`, ~170 removed | 20 | 4.2–11.9 ms |
+| vector top 20, index scans off | Bitmap scan on `memories_user_id` + top-N sort (exact) | 20 | 2.4–3.6 ms |
+| full-text `zanzibar` (rare) | Bitmap scan on `memories_user_id`, then `tsv @@ q` filter | 4 | 0.3–0.4 ms |
+| full-text `coffee` (common) | same | 20 | 0.5–0.7 ms |
 
 What the plans show:
 - **Full-text searches don't use the GIN index at this size.** The planner filters by `user_id` first: 2000 rows is smaller than any GIN result, so that's the right call. GIN starts to pay off once a single user has many rows.
-- **Exact search over one user's 2000 rows is as fast as HNSW (3.6 vs 4.2 ms) and has perfect recall.** For per-user memory, where each user has thousands of rows rather than millions, the exact scan via `user_id` is a valid design. HNSW earns its keep only when one user's rows are huge.
+- **Exact search over one user's 2000 rows is as fast as HNSW, often faster (2.4–3.6 vs 4.2–11.9 ms), and has perfect recall.** For per-user memory, where each user has thousands of rows rather than millions, the exact scan via `user_id` is a valid design. HNSW earns its keep only when one user's rows are huge.
 
 ## Run
 
