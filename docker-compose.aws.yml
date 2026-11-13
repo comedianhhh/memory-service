@@ -1,0 +1,40 @@
+# AWS mode, emulated by LocalStack. Layered on top of docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d --build
+#   python scripts/aws_bootstrap.py      # bucket + secret (what Terraform would create on real AWS)
+#   docker compose -f docker-compose.yml -f docker-compose.aws.yml restart api
+services:
+  localstack:
+    image: localstack/localstack:2026.10.7
+    ports:
+      - "4566:4566"
+    environment:
+      LOCALSTACK_AUTH_TOKEN: ${LOCALSTACK_AUTH_TOKEN:-}   # from .env (see .env.example)
+      SERVICES: secretsmanager,s3,sqs,iam,sts
+      # LocalStack skips S3 signature checks by default; turn them on so presigned URLs behave like AWS
+      S3_SKIP_SIGNATURE_VALIDATION: "0"
+      # Known gap: unsigned GETs still succeed here (real AWS blocks them on a private bucket);
+      # ENFORCE_IAM=1 didn't change that on the freemium plan (checked 2026-11-13).
+    networks:
+      default:
+        # Public DNS sends localhost.localstack.cloud to 127.0.0.1 (your machine, port 4566 mapped);
+        # inside the compose network this alias sends it to the localstack container. One hostname
+        # that works from both sides, so a presigned URL made by the api opens in your browser too.
+        aliases: [localhost.localstack.cloud]
+    healthcheck:
+      # the image has no curl, but it has python
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:4566/_localstack/health', timeout=2)"]
+      interval: 3s
+      retries: 30
+
+  api:
+    environment:
+      AWS_ENDPOINT_URL: http://localhost.localstack.cloud:4566
+      AWS_DEFAULT_REGION: ca-central-1
+      # LocalStack accepts any keys. On ECS these lines go away: the task role supplies credentials.
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      MEMORY_DSN_SECRET_ID: memory/app-dsn   # wins over MEMORY_DSN
+      EXPORT_BUCKET: memory-exports
+    depends_on:
+      localstack:
+        condition: service_healthy

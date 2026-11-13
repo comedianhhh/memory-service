@@ -10,8 +10,20 @@ from uuid import UUID
 import psycopg
 from psycopg_pool import ConnectionPool
 
+def _app_dsn() -> str:
+    """MEMORY_DSN_SECRET_ID set -> read the DSN from AWS Secrets Manager once, at startup.
+    Otherwise MEMORY_DSN, then the local default. Reading at startup means a missing secret or a
+    missing permission crashes the container right away instead of failing the first request."""
+    secret_id = os.environ.get("MEMORY_DSN_SECRET_ID")
+    if secret_id:
+        from .aws import dsn_from_secret, get_secret  # boto3 only loads when it's actually used
+
+        return dsn_from_secret(get_secret(secret_id))
+    return os.environ.get("MEMORY_DSN", "postgresql://app_user:app_user@localhost:5433/memory")
+
+
 # app_user: not the table owner, NOBYPASSRLS -> row level security applies
-APP_DSN = os.environ.get("MEMORY_DSN", "postgresql://app_user:app_user@localhost:5433/memory")
+APP_DSN = _app_dsn()
 # owner / superuser: RLS does not apply. Never used on the request path.
 ADMIN_DSN = os.environ.get("MEMORY_ADMIN_DSN", "postgresql://memory:memory@localhost:5433/memory")
 

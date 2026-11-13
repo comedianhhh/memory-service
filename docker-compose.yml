@@ -24,6 +24,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+# Local AWS (LocalStack) lives in docker-compose.aws.yml, so this file and CI need no token.
 # schema lives in migrations/ (alembic upgrade head); the api container runs it on start
 volumes:
   pgdata:

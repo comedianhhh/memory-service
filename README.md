@@ -126,7 +126,7 @@ What it shows:
 ```bash
 docker compose up -d
 python -m venv .venv && .venv/Scripts/pip install -r requirements.txt
-.venv/Scripts/python -m pytest -q          # 49 tests; waits for Postgres and runs migrations itself
+.venv/Scripts/python -m pytest -q          # 54 tests; waits for Postgres and runs migrations itself
 .venv/Scripts/alembic upgrade head         # only needed before running the scripts below without pytest first
 .venv/Scripts/python scripts/seed.py
 .venv/Scripts/python eval/run.py
@@ -144,6 +144,29 @@ mc.search("pet medication")       # refreshes the access token by itself when it
 ```
 
 Tests use `FakeEmbedder` (hashed bag of words) and an injected clock, so they need no model download and no waiting.
+
+## AWS mode (LocalStack): Secrets Manager + S3 export
+
+`POST /me/export` writes all of the caller's memories to one JSON file in a private S3 bucket and
+returns a presigned GET link that expires in 15 minutes. The DB read happens inside the RLS
+transaction; the S3 upload happens after it closes, so a slow S3 call never holds a connection.
+With `MEMORY_DSN_SECRET_ID` set, the DSN comes from Secrets Manager at startup, so a missing secret
+or permission stops the container immediately instead of failing the first request.
+
+Nothing in the code names an endpoint: boto3 reads `AWS_ENDPOINT_URL`, so the same code runs against
+LocalStack here and real AWS when that variable is unset.
+
+```bash
+cp .env.example .env                       # paste your LocalStack auth token
+docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d --build
+.venv/Scripts/python scripts/aws_bootstrap.py   # private bucket (encrypted, 1-day expiry) + DSN secret
+docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d api   # api exits until the secret exists
+```
+
+Checked 2026-11-13 against LocalStack 2026.10.7: export downloads from the host browser, and a link
+with its expiry edited returns 403 (needs `S3_SKIP_SIGNATURE_VALIDATION=0`; LocalStack skips the
+check by default). Gap: an unsigned GET still returns 200 there, while real AWS blocks it on a
+private bucket. CI tests the same code against moto instead (no token needed).
 
 ## Not yet
 

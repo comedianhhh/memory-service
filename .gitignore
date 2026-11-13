@@ -1,3 +1,5 @@
 .venv/
 __pycache__/
 .pytest_cache/
+# local secrets (LocalStack auth token etc.); see .env.example
+.env

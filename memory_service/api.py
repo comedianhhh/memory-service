@@ -6,6 +6,7 @@ to tamper with: the token's `sub` goes into SET LOCAL app.user_id and RLS does t
 
 from __future__ import annotations
 
+import os
 import time
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
@@ -135,6 +136,12 @@ class MessageOut(BaseModel):
     memory_ids: list[str]
 
 
+class ExportOut(BaseModel):
+    url: str
+    expires_in: int
+    count: int
+
+
 class Hit(BaseModel):
     id: str
     text: str
@@ -207,6 +214,20 @@ def create_message(body: MessageIn, me: Me, conn: Conn, embedder: Emb) -> Messag
     with user_session(conn, me.user_id):
         message_id, ids = add_message(conn, embedder, me.user_id, body.text, body.importance)
     return MessageOut(message_id=message_id, memory_ids=ids)
+
+
+@app.post("/me/export")
+def export_memories(me: Me, conn: Conn, now: Now) -> ExportOut:
+    """All of this user's memories as one JSON file in S3, plus a 15-minute download link."""
+    bucket = os.environ.get("EXPORT_BUCKET")
+    if not bucket:
+        raise HTTPException(503, "export is not configured (EXPORT_BUCKET unset)")
+    from .export import EXPORT_TTL_S, read_memories, upload_export  # boto3 only loads when used
+
+    with user_session(conn, me.user_id):
+        memories = read_memories(conn)
+    _, url = upload_export(bucket, me.user_id, memories, now)  # outside the transaction
+    return ExportOut(url=url, expires_in=EXPORT_TTL_S, count=len(memories))
 
 
 @app.get("/me/memories/search")
