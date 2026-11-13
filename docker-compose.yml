@@ -13,6 +13,17 @@ services:
       test: ["CMD-SHELL", "pg_isready -U memory"]
       interval: 2s
       retries: 20
-# schema lives in migrations/ (alembic upgrade head), not in an init script
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # inside the compose network: service name "db", container port 5432 (not the host's 5433)
+      MEMORY_DSN: postgresql://app_user:app_user@db:5432/memory
+      MEMORY_ADMIN_DSN: postgresql://memory:memory@db:5432/memory
+    depends_on:
+      db:
+        condition: service_healthy
+# schema lives in migrations/ (alembic upgrade head); the api container runs it on start
 volumes:
   pgdata:
