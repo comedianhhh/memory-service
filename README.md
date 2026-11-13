@@ -126,7 +126,7 @@ What it shows:
 ```bash
 docker compose up -d
 python -m venv .venv && .venv/Scripts/pip install -r requirements.txt
-.venv/Scripts/python -m pytest -q          # 54 tests; waits for Postgres and runs migrations itself
+.venv/Scripts/python -m pytest -q          # 56 tests; waits for Postgres and runs migrations itself
 .venv/Scripts/alembic upgrade head         # only needed before running the scripts below without pytest first
 .venv/Scripts/python scripts/seed.py
 .venv/Scripts/python eval/run.py
@@ -167,6 +167,34 @@ Checked 2026-11-13 against LocalStack 2026.10.7: export downloads from the host 
 with its expiry edited returns 403 (needs `S3_SKIP_SIGNATURE_VALIDATION=0`; LocalStack skips the
 check by default). Gap: an unsigned GET still returns 200 there, while real AWS blocks it on a
 private bucket. CI tests the same code against moto instead (no token needed).
+
+## Tracing (OpenTelemetry → Jaeger)
+
+Off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set. When on, each request is one trace: the FastAPI
+server span, a span per SQL statement (psycopg), per AWS call (botocore), and per pipeline step —
+every `logs.timed()` block is also a span, with its fields as `app.*` attributes. Every JSON log line
+carries `trace_id` / `span_id`, so a slow bar in the waterfall leads straight to its log lines.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.otel.yml up -d --build
+.venv/Scripts/python scripts/trace_stats.py      # 40 memories, 100 searches, p50/p95 per span
+# UI: http://localhost:16686  (service: memory-service)
+```
+
+2026-11-13, local Docker on Windows, 40 memories, 100 hybrid searches (real bge-small embedder, CPU):
+
+| span | n | p50 ms | p95 ms |
+|---|---|---|---|
+| `GET /me/memories/search` (whole request) | 100 | 7.70 | 13.58 |
+| `search` | 100 | 5.18 | 7.77 |
+| `embed` (query) | 100 | 2.83 | 3.91 |
+| `retrieve` (vector + fts) | 200 | 0.60 | 0.92 |
+| `fuse` (RRF) | 100 | 0.14 | 0.19 |
+| pool health-check ping (`check_connection` sends an empty query) | 100 | 0.13 | 0.27 |
+
+Embedding the query is over half of `search`; the ~2.5 ms between `search` and the whole request
+is token auth (session lookups) and serialisation. Jaeger 2.x dropped the old `/api/traces`; the
+script reads the v3 API (`/api/v3/traces`, OTLP JSON).
 
 ## Not yet
 

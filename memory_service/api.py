@@ -19,7 +19,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
-from . import auth, logs
+from . import auth, logs, telemetry
 from .db import make_pool, user_session
 from .embed import Embedder, FastEmbedder
 from .search import add_memory, add_message, search
@@ -39,6 +39,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="memory-service", lifespan=lifespan)
+telemetry.setup(app)  # no-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set
 
 
 @app.exception_handler(auth.AuthError)

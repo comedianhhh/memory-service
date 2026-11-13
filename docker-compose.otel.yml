@@ -1,0 +1,17 @@
+# Tracing, layered on docker-compose.yml (optionally with docker-compose.aws.yml too):
+#   docker compose -f docker-compose.yml -f docker-compose.otel.yml up -d --build
+#   open http://localhost:16686 (Jaeger UI), service "memory-service"
+#   .venv/Scripts/python scripts/trace_stats.py      # p50 / p95 per step from Jaeger's API
+services:
+  jaeger:
+    image: jaegertracing/jaeger:2.23.0   # all-in-one: OTLP receiver + in-memory storage + UI
+    ports:
+      - "16686:16686"   # UI and query API
+      - "4318:4318"     # OTLP over HTTP
+
+  api:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME: memory-service
+    depends_on:
+      - jaeger
