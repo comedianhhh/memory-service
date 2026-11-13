@@ -30,6 +30,10 @@ def _db_up(wait_s: float = float(os.environ.get("DB_WAIT_SECONDS", "20"))) -> bo
 
 
 DB_UP = _db_up()
+# Locally a missing database skips the DB tests. In CI (GitHub Actions sets CI=true) that would be a
+# false green: every test skipped, run reported as passing. Fail loudly instead.
+if os.environ.get("CI") and not DB_UP:
+    raise RuntimeError(f"CI: Postgres unreachable at {ADMIN_DSN.split('@')[-1]}; refusing to skip DB tests")
 requires_db = pytest.mark.skipif(not DB_UP, reason="Postgres not running: docker compose up -d")
 
 

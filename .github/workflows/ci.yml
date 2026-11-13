@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: memory
+          POSTGRES_PASSWORD: memory
+          POSTGRES_DB: memory
+        # The job runs on the runner VM, not in a container, so tests reach the DB at localhost:5433
+        # (the default in memory_service/db.py). Nothing to override.
+        ports:
+          - "5433:5432"
+        options: >-
+          --health-cmd "pg_isready -U memory"
+          --health-interval 2s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      # -rs lists any skipped test with its reason; conftest.py fails the run if CI has no database.
+      - run: python -m pytest -q -rs
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      # Proves the Dockerfile still builds (including the model download) on every change.
+      - run: docker build -t memory-service:ci .
