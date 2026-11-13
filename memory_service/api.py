@@ -19,7 +19,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
-from . import auth, logs, telemetry
+from . import auth, jobqueue, logs, telemetry
 from .db import make_pool, user_session
 from .embed import Embedder, FastEmbedder
 from .search import add_memory, add_message, search
@@ -137,6 +137,15 @@ class MessageOut(BaseModel):
     memory_ids: list[str]
 
 
+class JobOut(BaseModel):
+    job_id: int
+    message_id: str
+    status: str
+    attempts: int = 0
+    memory_ids: list[str] | None = None
+    error: str | None = None
+
+
 class ExportOut(BaseModel):
     url: str
     expires_in: int
@@ -215,6 +224,31 @@ def create_message(body: MessageIn, me: Me, conn: Conn, embedder: Emb) -> Messag
     with user_session(conn, me.user_id):
         message_id, ids = add_message(conn, embedder, me.user_id, body.text, body.importance)
     return MessageOut(message_id=message_id, memory_ids=ids)
+
+
+@app.post("/me/messages/async", status_code=202)
+def create_message_async(body: MessageIn, me: Me, conn: Conn) -> JobOut:
+    """Accept a message and return at once; a worker chunks, embeds and stores it (202 Accepted).
+    The job row commits in this request's transaction, so an accepted message can't be lost."""
+    payload = {"text": body.text, "importance": body.importance, "_trace": telemetry.inject()}
+    with user_session(conn, me.user_id):
+        job_id, message_id = jobqueue.enqueue(conn, me.user_id, "message", payload)
+    return JobOut(job_id=job_id, message_id=message_id, status="queued")
+
+
+@app.get("/me/jobs/{job_id}")
+def get_job(job_id: int, me: Me, conn: Conn) -> JobOut:
+    with user_session(conn, me.user_id):  # RLS: someone else's job id looks like a missing one
+        row = conn.execute(
+            "SELECT message_id, status, attempts, result, last_error FROM jobs WHERE id = %s", (job_id,)
+        ).fetchone()
+    if row is None:
+        raise HTTPException(404, "job not found")
+    message_id, status, attempts, result, error = row
+    return JobOut(
+        job_id=job_id, message_id=message_id, status=status, attempts=attempts,
+        memory_ids=(result or {}).get("memory_ids"), error=error if status == "dead" else None,
+    )
 
 
 @app.post("/me/export")

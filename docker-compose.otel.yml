@@ -15,3 +15,10 @@ services:
       OTEL_SERVICE_NAME: memory-service
     depends_on:
       - jaeger
+
+  worker:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME: memory-worker
+    depends_on:
+      - jaeger

@@ -19,9 +19,12 @@ MODES = ("hybrid", "vector", "fts")
 _WORD = re.compile(r"[a-z0-9]+")
 
 
+# ON CONFLICT (id) DO NOTHING makes writes idempotent: a chunk's id is {message_id}-{index}, so a
+# queue job that runs twice (at-least-once delivery) writes each chunk once.
 _INSERT = """
     INSERT INTO memories (id, user_id, text, embedding, importance, source_id, chunk_index)
     VALUES (%s, %s, %s, %s::vector, %s, %s, %s)
+    ON CONFLICT (id) DO NOTHING
 """
 
 
@@ -50,24 +53,43 @@ def add_message(
     max_words: int = 80,
 ) -> tuple[str, list[str]]:
     """Chunk -> embed all chunks in one batch -> insert. Returns (message_id, memory ids in chunk order)."""
+    message_id = uuid.uuid4().hex
+    prepared = prepare_message(embedder, text, max_words)
+    return message_id, insert_chunks(conn, user_id, message_id, prepared, importance)
+
+
+def prepare_message(embedder: Embedder, text: str, max_words: int = 80) -> list[tuple[str, list[float]]]:
+    """Chunk and embed, no database. The queue worker runs this before opening a transaction, so a
+    slow model never holds a connection."""
     with timed("chunk", words=len(text.split())) as log:
         chunks = chunk_text(text, max_words=max_words)
         log["chunks"] = len(chunks)
-    message_id = uuid.uuid4().hex
     if not chunks:
-        return message_id, []
-    vectors = embedder.embed_passages(chunks)
-    ids = [f"{message_id}-{i}" for i in range(len(chunks))]
-    with timed("db.insert", table="memories", rows=len(chunks)):
+        return []
+    return list(zip(chunks, embedder.embed_passages(chunks), strict=True))
+
+
+def insert_chunks(
+    conn: psycopg.Connection,
+    user_id: str,
+    message_id: str,
+    prepared: list[tuple[str, list[float]]],
+    importance: float = 0.5,
+) -> list[str]:
+    """Insert chunk i as memory {message_id}-{i}; rows that already exist are skipped."""
+    ids = [f"{message_id}-{i}" for i in range(len(prepared))]
+    if not ids:
+        return []
+    with timed("db.insert", table="memories", rows=len(ids)):
         with conn.cursor() as cur:
             cur.executemany(
                 _INSERT,
                 [
                     (mid, user_id, chunk, to_pgvector(vec), importance, message_id, i)
-                    for i, (mid, chunk, vec) in enumerate(zip(ids, chunks, vectors, strict=True))
+                    for i, (mid, (chunk, vec)) in enumerate(zip(ids, prepared, strict=True))
                 ],
             )
-    return message_id, ids
+    return ids
 
 
 def vector_search(conn: psycopg.Connection, embedder: Embedder, query: str, limit: int = CANDIDATES) -> list[str]:

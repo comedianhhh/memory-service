@@ -24,6 +24,21 @@ services:
     depends_on:
       db:
         condition: service_healthy
+  # Queue worker: same image, different command. Scale with `docker compose up -d --scale worker=3`;
+  # SKIP LOCKED keeps workers from taking the same job.
+  worker:
+    build: .
+    command: ["python", "-m", "memory_service.worker"]
+    environment:
+      WORKER_DSN: postgresql://worker:worker@db:5432/memory
+      MEMORY_ADMIN_DSN: postgresql://memory:memory@db:5432/memory
+    restart: unless-stopped   # if it starts before the api has run migrations, it exits and retries
+    stop_grace_period: 30s    # SIGTERM finishes the current job first
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started
 # Local AWS (LocalStack) lives in docker-compose.aws.yml, so this file and CI need no token.
 # schema lives in migrations/ (alembic upgrade head); the api container runs it on start
 volumes:

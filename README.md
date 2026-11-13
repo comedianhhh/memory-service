@@ -126,7 +126,7 @@ What it shows:
 ```bash
 docker compose up -d
 python -m venv .venv && .venv/Scripts/pip install -r requirements.txt
-.venv/Scripts/python -m pytest -q          # 56 tests; waits for Postgres and runs migrations itself
+.venv/Scripts/python -m pytest -q          # 63 tests; waits for Postgres and runs migrations itself (stop the compose `worker` first)
 .venv/Scripts/alembic upgrade head         # only needed before running the scripts below without pytest first
 .venv/Scripts/python scripts/seed.py
 .venv/Scripts/python eval/run.py
@@ -195,6 +195,33 @@ docker compose -f docker-compose.yml -f docker-compose.otel.yml up -d --build
 Embedding the query is over half of `search`; the ~2.5 ms between `search` and the whole request
 is token auth (session lookups) and serialisation. Jaeger 2.x dropped the old `/api/traces`; the
 script reads the v3 API (`/api/v3/traces`, OTLP JSON).
+
+## Async ingestion (Postgres job queue)
+
+`POST /me/messages/async` stores a job and returns `202` at once; a worker (`python -m memory_service.worker`,
+the `worker` service in compose) chunks, embeds and writes it. `GET /me/jobs/{id}` shows the status.
+
+Why a Postgres table rather than SQS: accepting the message and queueing the work must happen together.
+Postgres + SQS has no shared transaction (commit, then the send fails = a lost job: the dual-write
+problem); a job row commits atomically with everything else. The semantics are SQS's:
+
+| SQS | here |
+|---|---|
+| receive + visibility timeout | `claim()`: `FOR UPDATE SKIP LOCKED`, lease until `visible_at` |
+| at-least-once delivery | a crashed worker never completes; the lease expires; another worker claims it |
+| `DeleteMessage` | `complete()` — in the same transaction as the job's writes, and only with the current lease (fencing) |
+| redrive policy → DLQ | `max_attempts`, backoff between attempts, then `status = 'dead'` |
+
+Handlers are idempotent: chunk ids are `{message_id}-{i}`, fixed at enqueue, with `ON CONFLICT DO NOTHING`.
+The worker DB role can claim any job but writes memories under the owner's RLS session; the API role
+can only enqueue and read its own jobs. The trace context travels in the job payload, so one trace in
+Jaeger covers `POST /me/messages/async` → `job` → `chunk` / `embed` / `db.insert` across both services.
+
+Checked 2026-11-13 (local Docker, real embedder, ~780-word message → 12 chunks): sync `POST /me/messages`
+182 ms vs async 19 ms (202), job done ~1.2 s later. 30 jobs on `--scale worker=3`: all done in 4.4 s,
+every job 1 attempt, 150 rows for 150 distinct chunk ids. `tests/test_queue.py` covers crash redelivery,
+redelivery after writes (no duplicates), a stale worker losing its lease (its writes roll back), a
+poison job going dead, and RLS on jobs; removing `ON CONFLICT` or the lease check fails one test each.
 
 ## Not yet
 
