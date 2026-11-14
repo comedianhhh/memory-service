@@ -223,6 +223,49 @@ every job 1 attempt, 150 rows for 150 distinct chunk ids. `tests/test_queue.py` 
 redelivery after writes (no duplicates), a stale worker losing its lease (its writes roll back), a
 poison job going dead, and RLS on jobs; removing `ON CONFLICT` or the lease check fails one test each.
 
+## MCP server (`memory_service/mcp_server.py`)
+
+Two tools for any MCP host (Claude Desktop, MCP Inspector, Claude Code): `search_memory(query, k, mode)`
+(read-only) and `write_memory(text, importance)`. Transport is stdio: the host starts the process and
+speaks JSON-RPC over stdin/stdout, so logs go to stderr only.
+
+The tools call the HTTP API through `MemoryClient`, not Postgres directly. Auth, RLS and input limits
+stay in one place; the MCP server is just another client with a user's login. Login is lazy, so the
+server starts and lists tools even with the API down; failures come back as tool errors
+(`memory API unreachable at …`, `memory API 422: …`) instead of crashing the process. If the refresh
+token has expired, it logs in once more.
+
+```bash
+docker compose up -d db api
+MEMORY_EMAIL=you@example.com MEMORY_PASSWORD=... npx @modelcontextprotocol/inspector \
+  .venv/Scripts/python.exe -m memory_service.mcp_server
+```
+
+Claude Desktop (`claude_desktop_config.json`, Settings → Developer → Edit Config):
+
+```json
+{
+  "mcpServers": {
+    "memory-service": {
+      "command": "C:\\path\\to\\memory-service\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "memory_service.mcp_server"],
+      "cwd": "C:\\path\\to\\memory-service",
+      "env": {
+        "MEMORY_API_URL": "http://localhost:8000",
+        "MEMORY_EMAIL": "you@example.com",
+        "MEMORY_PASSWORD": "..."
+      }
+    }
+  }
+}
+```
+
+Checked 2026-11-14: Inspector CLI `tools/list` shows both tools; `write_memory` then a paraphrased
+`search_memory` ("what language does Alan prefer") returns the written memory first.
+`tests/test_mcp_server.py` spawns the server over real stdio (any stray stdout breaks the JSON-RPC parse),
+checks errors come back as `isError` with the process still alive, and runs write → search and
+re-login after session expiry against the API.
+
 ## Not yet
 
 - Login rate limiting / lockout.
