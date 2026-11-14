@@ -88,3 +88,50 @@ def test_missing_credentials_is_a_clear_error():
     session = ApiSession(MemoryClient(http=httpx.Client(base_url="http://127.0.0.1:9")), None, None)
     with pytest.raises(ToolError, match="MEMORY_EMAIL"):
         session.call(lambda: None)
+
+
+@requires_db
+def test_inprocess_mode_needs_no_api_server(account):
+    """MEMORY_API_URL=inprocess: the subprocess hosts the FastAPI app itself and talks to the DB
+    directly via MEMORY_DSN. Nothing listens on a port; auth and RLS still apply."""
+    from mcp.client.session import ClientSession
+    from mcp.client.stdio import StdioServerParameters, stdio_client
+
+    from memory_service.db import APP_DSN
+
+    a = account()
+    params = StdioServerParameters(
+        command=sys.executable,
+        args=["-m", "memory_service.mcp_server"],
+        cwd=ROOT,
+        env={
+            "MEMORY_API_URL": "inprocess",
+            "MEMORY_DSN": APP_DSN,
+            "MEMORY_EMAIL": a["email"],
+            "MEMORY_PASSWORD": a["password"],
+        },
+    )
+
+    async def run():
+        with open(os.devnull, "w") as quiet:
+            async with stdio_client(params, errlog=quiet) as (read, write):
+                async with ClientSession(read, write) as s:
+                    await s.initialize()
+                    w = await s.call_tool("write_memory", {"text": "inprocess mode stores this"})
+                    assert not w.is_error, w.content
+                    r = await s.call_tool("search_memory", {"query": "inprocess", "mode": "fts"})
+                    assert r.structured_content["result"][0]["id"] == w.structured_content["id"]
+
+    anyio.run(run)
+
+
+def test_env_file_does_not_override_existing_env(tmp_path, monkeypatch):
+    from memory_service.mcp_server import load_env_file
+
+    f = tmp_path / ".env"
+    f.write_text("# comment\nMS_TEST_A=from_file\nMS_TEST_B=x=y\n\n", encoding="utf-8")
+    monkeypatch.setenv("MS_TEST_A", "already_set")
+    monkeypatch.delenv("MS_TEST_B", raising=False)
+    load_env_file(str(f))
+    assert os.environ["MS_TEST_A"] == "already_set"
+    assert os.environ["MS_TEST_B"] == "x=y"

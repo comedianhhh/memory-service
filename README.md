@@ -241,7 +241,17 @@ MEMORY_EMAIL=you@example.com MEMORY_PASSWORD=... npx @modelcontextprotocol/inspe
   .venv/Scripts/python.exe -m memory_service.mcp_server
 ```
 
-Claude Desktop (`claude_desktop_config.json`, Settings → Developer → Edit Config):
+**No Docker, no API process (`MEMORY_API_URL=inprocess`).** The MCP server hosts the FastAPI app
+in-process (Starlette `TestClient`): same routes, JWT auth and RLS, no port. Point `MEMORY_DSN` at a
+cloud Postgres with pgvector (checked on Neon free tier, Postgres 18 + pgvector 0.8): run
+`alembic upgrade head` with `MEMORY_ADMIN_DSN` = the owner DSN and `APP_DB_PASSWORD` /
+`WORKER_DB_PASSWORD` set to strong values (the migration creates the `app_user` and `worker` roles), use
+the direct host rather than the `-pooler` one, then `python -m memory_service.mcp_server register` once.
+`MEMORY_ENV_FILE` lets the server read all of this from the git-ignored `.env`, so the MCP host's config
+holds no secrets.
+
+Claude Desktop (`claude_desktop_config.json`, Settings → Developer → Edit Config; the MSIX build reads
+`%LOCALAPPDATA%\Claude-Data\<package>\claude_desktop_config.json`, not `%APPDATA%\Claude`):
 
 ```json
 {
@@ -251,14 +261,17 @@ Claude Desktop (`claude_desktop_config.json`, Settings → Developer → Edit Co
       "args": ["-m", "memory_service.mcp_server"],
       "cwd": "C:\\path\\to\\memory-service",
       "env": {
-        "MEMORY_API_URL": "http://localhost:8000",
-        "MEMORY_EMAIL": "you@example.com",
-        "MEMORY_PASSWORD": "..."
+        "PYTHONPATH": "C:\\path\\to\\memory-service",
+        "MEMORY_ENV_FILE": "C:\\path\\to\\memory-service\\.env"
       }
     }
   }
 }
 ```
+
+`.env` then holds `MEMORY_API_URL=inprocess`, `MEMORY_DSN`, `MEMORY_EMAIL`, `MEMORY_PASSWORD`, `JWT_SECRET`.
+Checked 2026-11-14 with Docker fully stopped: launched from the Desktop config, first `write_memory`
+1.4 s (embedding model load), `search_memory` 0.18 s; all 69 tests also pass against Neon.
 
 Checked 2026-11-14: Inspector CLI `tools/list` shows both tools; `write_memory` then a paraphrased
 `search_memory` ("what language does Alan prefer") returns the written memory first.
